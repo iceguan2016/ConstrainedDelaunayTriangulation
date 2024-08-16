@@ -558,6 +558,19 @@ namespace Game.Utils.Triangulation
             }
         }
 
+        public void DrawTriangle3D(int triangleIndex, float y, Color color)
+        {
+            for (int i = 0; i < 3; ++i)
+            {
+                var p0 = m_points[m_triangleVertices[triangleIndex * 3 + i]];
+                var p1 = m_points[m_triangleVertices[triangleIndex * 3 + (i + 1) % 3]];
+
+                var v0 = new Vector3(p0[0], y, p0[1]);
+                var v1 = new Vector3(p1[0], y, p1[1]);
+                Debug.DrawLine(v0, v1, color, 10.0f);
+            }
+        }
+
         public void LogDump()
         {
             for(int i = 0; i < TriangleCount; ++i)
