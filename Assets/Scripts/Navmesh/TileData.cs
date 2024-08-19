@@ -58,6 +58,18 @@ namespace Navmesh
             return Center;
         }
 
+        public float GetArea()
+        {
+            float area = 0;
+            for (int i = 1, ni = NumPoints - 1; i < ni; i++)
+            {
+                var vi = Vertices[i] - Vertices[0];
+                var vii = Vertices[i+1] - Vertices[0];
+                area += vi[0] * vii[2] - vii[0] * vi[2];
+            }
+            return area / 2;
+        }
+
         public bool GetFacePlane(out UnityEngine.Vector3 OutPoint, out UnityEngine.Vector3 OutNormal)
         {
 	        int numPoints = NumPoints;
@@ -307,7 +319,7 @@ namespace Navmesh
             outputPolygons.Add(points);
         }
 
-        public void DrawGizmos(Color c)
+        public void DrawGizmos(FDebugParams InDebugParams, Color c)
         {
             var center = GetCenter();
             center.y = 0;
@@ -331,21 +343,46 @@ namespace Navmesh
                     Gizmos.DrawLine(v0, v0 + n * 0.3f);
                 }
 
-                if (i == 0) 
+                if (InDebugParams.IsDrawConvexPoint)
                 {
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawCube(v0, UnityEngine.Vector3.one * 0.2f);
+                    var pointSize = 0.05f;
+                    if (i == 0)
+                    {
+                        Gizmos.color = Color.red;
+                        Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
+                    }
+                    else if (i == 1)
+                    {
+                        Gizmos.color = Color.blue;
+                        Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
+                    }
+                    else
+                    {
+                        Gizmos.color = Color.green;
+                        Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
+                    }
                 }
-                else if (i == 1)
-                {
-                    Gizmos.color = Color.blue;
-                    Gizmos.DrawCube(v0, UnityEngine.Vector3.one * 0.2f);
-                }
-                else
-                {
-                    Gizmos.color = Color.green;
-                    Gizmos.DrawCube(v0, UnityEngine.Vector3.one * 0.2f);
-                }
+            }
+        }
+
+        public void DrawConvex(Color c)
+        {
+            var center = GetCenter();
+            center.y = 0;
+
+            float scale = 0.95f;
+
+            for (int i = 0, ni = NumPoints; i < ni; i++)
+            {
+                Gizmos.color = c;
+
+                int ii = (i + 1) % ni;
+                var v0 = Vertices[i]; v0.y = 0.0f;
+                var v1 = Vertices[ii]; v1.y = 0.0f;
+
+                v0 = center + (v0 - center) * scale;
+                v1 = center + (v1 - center) * scale;
+                Debug.DrawLine(v0, v1, c, 1.0f, false);
             }
         }
     }
@@ -381,7 +418,7 @@ namespace Navmesh
             return true;
         }
 
-        public bool AddConvexShape(FConvexShape InConvexShape)
+        public bool AddConvexShape(FConvexShape InConvexShape, FDebugParams InDebugParams)
         {
             // 1.用Tile的Bounds裁剪Shape
             //
@@ -400,6 +437,10 @@ namespace Navmesh
                 new UnityEngine.Vector3(MinBounds[0], MinBounds[1], MaxBounds[2]), new UnityEngine.Vector3(0.0f, 0.0f, 1.0f),
             };
 
+
+            // Convex最小面积
+            var MinConvexArea = 0.25f;
+
             var CurrConvexShape = InConvexShape;
             for (int i = 0; i < 4 && CurrConvexShape != null; ++i)
             {
@@ -412,6 +453,8 @@ namespace Navmesh
 
             // Shape和Tile不相交
             if (CurrConvexShape == null) return false;
+            var Area = CurrConvexShape.GetArea();
+            if (Area < MinConvexArea) return false;
 
             // 2.添加约Shape，需要继续和已有的Convex做裁剪，因为Tirangulation算法要求Convex之间不能重叠
             List<FConvexShape> Fronts = new List<FConvexShape>();
@@ -421,10 +464,15 @@ namespace Navmesh
                 var NumEdges = CurrConvexShape.NumEdges;
                 for (int j=0; j<NumEdges && ClippedConvex != null; ++j)
                 {
+                    if (InDebugParams.LimitObstacleClipTimes >= 0 && j >= InDebugParams.LimitObstacleClipTimes) continue;
+
                     if (CurrConvexShape.GetEdgePlane(j, out var P, out var N))
                     {
                         var Side = ClippedConvex.Split(P, N, out var OutFront, out var OutBack);
-                        if (OutFront != null) Fronts.Add(OutFront);
+                        if (OutFront != null && OutFront.GetArea() >= MinConvexArea)
+                        {
+                            Fronts.Add(OutFront);
+                        }
                         ClippedConvex = OutBack;
                     }
                 }
@@ -442,7 +490,7 @@ namespace Navmesh
             public int convexBIndex;
             public int convexBEdgeIndex;
         }
-        public bool Triangulate()
+        public bool Triangulate(FDebugParams InDebugParams)
         {
             // 1.构造Bounds点
             List<UnityEngine.Vector2> pointsToTriangulate = new List<UnityEngine.Vector2>
@@ -453,14 +501,14 @@ namespace Navmesh
                 new UnityEngine.Vector2(MinBounds[0], MaxBounds[2])
             };
 
-            int numConvex = Mathf.Min(3, ConvexShapes.Count); // 测试使用
+            int numConvex = ConvexShapes.Count; // Mathf.Min(3, ConvexShapes.Count);
             // 2.合并所有的convex, 构造无重叠edge的hole(因为delaunay triangulation不支持edge重叠情况)
             // 2.1.找到2个convex的邻接edge(经过上面的裁剪流程，确保只会有1条邻接edge)
             var convexSharedEdgeIndex = new int[numConvex][];
             for (int i=0; i<numConvex; ++i)
             {
                 var convex = ConvexShapes[i];
-                var maxNumEdge = convex.NumEdges * 2;   // 因为会新增edge，这里预估一个最大的
+                var maxNumEdge = 50; // convex.NumEdges * 2;   // 因为会新增edge，这里预估一个最大的
                 convexSharedEdgeIndex[i] = new int[maxNumEdge];
                 for (var t = 0; t < maxNumEdge; ++t) convexSharedEdgeIndex[i][t] = -1;
             }
@@ -471,13 +519,16 @@ namespace Navmesh
             var float_cmp_tolerance = 0.0001f;
 
             var sharedEdges = new List<FSharedEdge>();
+
             for (var i = 0; i < numConvex; ++i)
             {
-                var convexA = ConvexShapes[i];
-                var numEdgeA = convexA.NumEdges;
                 for (var j = i + 1; j < numConvex; ++j)
                 {
                     var is_merged = false;
+
+                    var convexA = ConvexShapes[i];
+                    var numEdgeA = convexA.NumEdges;
+
                     var convexB = ConvexShapes[j];
                     var numEdgeB = convexB.NumEdges;
                     for (var edgeIndexA = 0; edgeIndexA < numEdgeA && !is_merged; ++edgeIndexA)
@@ -618,7 +669,7 @@ namespace Navmesh
                 var startEdgeIndex = 0;
 
                 var currConexIndex = startConvexIndex;
-                var currEdgeIndex = startConvexIndex;
+                var currEdgeIndex = startEdgeIndex;
                 var loopTimes = 0;
                 do
                 {
@@ -626,6 +677,11 @@ namespace Navmesh
                     {
                         Debug.LogError("Triangulate, fetch external edge loop too times!");
                         break;
+                    }
+
+                    if (currEdgeIndex >= convexSharedEdgeIndex[currConexIndex].Length)
+                    {
+                        Debug.LogError($"Triangulate, convexSharedEdgeIndex maxNumEdge too small!, current size:{convexSharedEdgeIndex[currConexIndex].Length}");
                     }
                     
                     var sharedEdgeIndex = convexSharedEdgeIndex[currConexIndex][currEdgeIndex];
@@ -667,16 +723,19 @@ namespace Navmesh
             m_constraintEdges = constrainedEdgePoints;
 
             // 4.三角剖分 
-            float TesselationMaximumTriangleArea = 0.0f;
-            Triangulation = new Game.Utils.Triangulation.DelaunayTriangulation();
-            Triangulation.Triangulate(pointsToTriangulate, TesselationMaximumTriangleArea, constrainedEdgePoints);
+            if (InDebugParams.IsTrangulation)
+            {
+                float TesselationMaximumTriangleArea = 0.0f;
+                Triangulation = new Game.Utils.Triangulation.DelaunayTriangulation();
+                Triangulation.Triangulate(pointsToTriangulate, TesselationMaximumTriangleArea, constrainedEdgePoints);
+            }
             return true;
         }
 
         // 调试使用
         private List<FSharedEdge> m_sharedEdges = null;
         private List<List<UnityEngine.Vector2>> m_constraintEdges = null;
-        public void DrawGizmos()
+        public void DrawGizmos(FDebugParams InDebugParams)
         {
             var Colors = new UnityEngine.Color[] {
                 UnityEngine.Color.red,
@@ -702,14 +761,17 @@ namespace Navmesh
             }
 
             // draw convex shape
-            for (int i=0; i<ConvexShapes.Count; ++i)
+            if (InDebugParams.IsDrawConvexShape)
             {
-                var Color = Colors[i % Colors.Length];
-                // ConvexShapes[i].DrawGizmos(Color);
+                for (int i = 0; i < ConvexShapes.Count; ++i)
+                {
+                    var Color = Colors[i % Colors.Length];
+                    ConvexShapes[i].DrawGizmos(InDebugParams, Color);
+                }
             }
 
             // draw shared edges
-            if (null != m_sharedEdges && m_sharedEdges.Count > 0)
+            if (InDebugParams.IsDrawSharedEdges && null != m_sharedEdges && m_sharedEdges.Count > 0)
             {
                 for (int i=0; i<m_sharedEdges.Count; ++i)
                 {
@@ -728,7 +790,7 @@ namespace Navmesh
                 }
             }
 
-            if (null != m_constraintEdges && m_constraintEdges.Count > 0)
+            if (InDebugParams.IsDrawMergedEdges && null != m_constraintEdges && m_constraintEdges.Count > 0)
             {
                 Gizmos.color = Color.magenta;
                 for (var i=0; i<m_constraintEdges.Count; ++i)
@@ -746,6 +808,14 @@ namespace Navmesh
                         Gizmos.DrawLine(v0, v1);
                     }
                 }
+            }
+        }
+
+        public void DrawConvex(int convexIndex, Color color)
+        {
+            if (convexIndex >= 0 && convexIndex < ConvexShapes.Count)
+            {
+                ConvexShapes[convexIndex].DrawConvex(color);
             }
         }
     }

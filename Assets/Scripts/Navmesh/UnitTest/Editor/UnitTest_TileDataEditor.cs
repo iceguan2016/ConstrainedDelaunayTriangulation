@@ -9,6 +9,7 @@ public class UnitTest_TileDataEditor : Editor
     // private SerializedProperty TriangleIndex_Slider = null;
     // private float TriangleIndex_Slider = 0;
     private int     DrawTriangleIndex = 0;
+    private int     DrawConvexIndex = 0;
 
     private void OnEnable()
     {
@@ -26,35 +27,69 @@ public class UnitTest_TileDataEditor : Editor
         var UnitTest = target as UnitTest_TileData;
         var TileData = UnitTest.TileData;
 
-        if (TileData != null && TileData.Triangulation != null)
+        if (TileData != null)
         {
             GUILayout.BeginVertical();
             {
-                var TriangleCount = TileData.Triangulation.TriangleSet.TriangleCount;
-                GUILayout.Label(string.Format("Totalt triangle count: {0}, draw index£º{1}", TriangleCount, DrawTriangleIndex));
+                var ConvexShapeCount = TileData.ConvexShapes.Count;
+                GUILayout.Label(string.Format("Totalt convex count: {0}, draw index£º{1}", ConvexShapeCount, DrawConvexIndex));
+                
+                if (TileData.Triangulation != null)
+                {
+                    var TriangleCount = TileData.Triangulation.TriangleSet.TriangleCount;
+                    GUILayout.Label(string.Format("Totalt triangle count: {0}, draw index£º{1}", TriangleCount, DrawTriangleIndex));
 
-                //TriangleIndex_Slider = GUILayout.HorizontalSlider(TriangleIndex_Slider, 0, TriangleCount - 1, GUILayout.Width(200));
-                //TriangleIndex_Slider = Mathf.RoundToInt(TriangleIndex_Slider);
+                    GUILayout.BeginHorizontal();
+                    {
+                        if (GUILayout.Button("Prev triangle"))
+                        {
+                            DrawTriangleIndex = Mathf.Clamp(--DrawTriangleIndex, 0, TriangleCount - 1);
+                            TileData.Triangulation.TriangleSet.DrawTriangle3D(DrawTriangleIndex, 0.0f, Color.green);
+                        }
+                        if (GUILayout.Button("Next triangle"))
+                        {
+                            DrawTriangleIndex = Mathf.Clamp(++DrawTriangleIndex, 0, TriangleCount - 1);
+                            TileData.Triangulation.TriangleSet.DrawTriangle3D(DrawTriangleIndex, 0.0f, Color.green);
+                        }
+                    }
+                    GUILayout.EndHorizontal();
+                }
 
                 GUILayout.BeginHorizontal();
-                { 
-                    if (GUILayout.Button("Prev triangle"))
+                {
+                    if (GUILayout.Button("Prev convex"))
                     {
-                        DrawTriangleIndex = Mathf.Clamp(--DrawTriangleIndex, 0, TriangleCount-1);
-                        TileData.Triangulation.TriangleSet.DrawTriangle3D(DrawTriangleIndex, 0.0f, Color.green);
+                        --DrawConvexIndex;
+                        DrawConvexIndex = (DrawConvexIndex + ConvexShapeCount) % ConvexShapeCount;
+                        TileData.DrawConvex(DrawConvexIndex, Color.white);
                     }
-                    if (GUILayout.Button("Next triangle"))
+                    if (GUILayout.Button("Next convex"))
                     {
-                        DrawTriangleIndex = Mathf.Clamp(++DrawTriangleIndex, 0, TriangleCount-1);
-                        TileData.Triangulation.TriangleSet.DrawTriangle3D(DrawTriangleIndex, 0.0f, Color.green);
+                        ++DrawConvexIndex;
+                        DrawConvexIndex = DrawConvexIndex % ConvexShapeCount;
+                        TileData.DrawConvex(DrawConvexIndex, Color.white);
                     }
                 }
                 GUILayout.EndHorizontal();
 
-                //if (GUILayout.Button("Draw Triangle"))
-                //{
-                //    TileData.Triangulation.TriangleSet.DrawTriangle3D(DrawTriangleIndex, 0.0f, Color.green);
-                //}
+                GUILayout.BeginHorizontal();
+                { 
+                    if (GUILayout.Button("Random test"))
+                    { 
+                        UnitTest.RandomTest();
+                    }
+
+                    if (GUILayout.Button("Do again"))
+                    {
+                        UnitTest.Triangulation();
+                    }
+
+                    if (GUILayout.Button("Dump obstacles"))
+                    {
+                        UnitTest.DumpObstacles();
+                    }
+                }
+                GUILayout.EndHorizontal();
             }
             GUILayout.EndVertical();
         }

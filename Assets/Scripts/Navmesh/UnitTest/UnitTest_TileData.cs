@@ -3,16 +3,39 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[System.Serializable]
+public class FDebugParams
+{
+    public bool IsTrangulation = true;
+    public bool IsDrawConvexShape = true;
+    public bool IsDrawConvexPoint = true;
+    public bool IsDrawSharedEdges = false;
+    public bool IsDrawMergedEdges = false;
+    public bool IsDrawTrangulation = true;
+
+    public int LimitObstacleClipTimes = -1;
+}
+
+[System.Serializable]
+public class FObstacle
+{
+    public BoxShape Shape = null;
+    public bool     IsAdd = true;
+}
+
 public class UnitTest_TileData : MonoBehaviour
 {
     // 配置参数
     [Tooltip("The size of tile.")]
     public Vector3      HalfExtent = new Vector3(5.0f, 5.0f, 5.0f);
     [Tooltip("The constraint shapes.")]
-    public BoxShape[]   Obstacles = new BoxShape[0];
+    public FObstacle[]  Obstacles = new FObstacle[0];
 
     [Tooltip("The mesh that displays the output triangles.")]
     public MeshFilter VisualRepresentation;
+
+    [Tooltip("The debug visulize params")]
+    public FDebugParams DebugParams;
 
     private Navmesh.FTileData tileData;
     public Navmesh.FTileData TileData { get { return tileData; } }
@@ -45,6 +68,11 @@ public class UnitTest_TileData : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        Triangulation();
+    }
+
+    public void Triangulation()
+    {
         tileData = new Navmesh.FTileData();
 
         Navmesh.FTileData.FInitTileDataParams Params;
@@ -55,20 +83,21 @@ public class UnitTest_TileData : MonoBehaviour
 
         if (tileData.Initialize(Params))
         {
-            for (int i=0; i<Obstacles.Length; ++i)
+            for (int i = 0; i < Obstacles.Length; ++i)
             {
-                var Convex = Obstacles[i].GetConvexShape();
-                tileData.AddConvexShape(Convex);
+                if (!Obstacles[i].IsAdd) continue;
+                var Convex = Obstacles[i].Shape.GetConvexShape();
+                tileData.AddConvexShape(Convex, DebugParams);
             }
 
             var startTime = Time.realtimeSinceStartupAsDouble;
 
-            if (tileData.Triangulate())
+            if (tileData.Triangulate(DebugParams))
             {
                 var endTime = Time.realtimeSinceStartupAsDouble;
 
                 triangle2Ds.Clear();
-                tileData.Triangulation.GetTrianglesDiscardingHoles(triangle2Ds);
+                if (tileData.Triangulation != null) tileData.Triangulation.GetTrianglesDiscardingHoles(triangle2Ds);
 
                 // if (VisualRepresentation != null) VisualRepresentation.mesh = CreateMeshFromTriangles(triangle2Ds);
 
@@ -85,20 +114,58 @@ public class UnitTest_TileData : MonoBehaviour
         Gizmos.color = Color.white;
         Gizmos.DrawWireCube(transform.position, HalfExtent*2);
 
-        Gizmos.color = Color.yellow;
-        for (int i = 0; i < triangle2Ds.Count; ++i)
+        if (DebugParams.IsDrawTrangulation)
         {
-            var triangle = triangle2Ds[i];
-            var v0 = new Vector3(triangle.p0[0], transform.position.y, triangle.p0[1]);
-            var v1 = new Vector3(triangle.p1[0], transform.position.y, triangle.p1[1]);
-            var v2 = new Vector3(triangle.p2[0], transform.position.y, triangle.p2[1]);
-            Gizmos.DrawLine(v0, v1);
-            Gizmos.DrawLine(v1, v2);
-            Gizmos.DrawLine(v2, v0);
+            Gizmos.color = Color.yellow;
+            for (int i = 0; i < triangle2Ds.Count; ++i)
+            {
+                var triangle = triangle2Ds[i];
+                var v0 = new Vector3(triangle.p0[0], transform.position.y, triangle.p0[1]);
+                var v1 = new Vector3(triangle.p1[0], transform.position.y, triangle.p1[1]);
+                var v2 = new Vector3(triangle.p2[0], transform.position.y, triangle.p2[1]);
+                Gizmos.DrawLine(v0, v1);
+                Gizmos.DrawLine(v1, v2);
+                Gizmos.DrawLine(v2, v0);
+            }
         }
 
-        if (null != tileData) tileData.DrawGizmos();
+        if (null != tileData) tileData.DrawGizmos(DebugParams);
 
         Gizmos.color = OldColor;
+    }
+
+    public void RandomTest()
+    {
+        if (Obstacles.Length <= 0) return;
+
+        //  随机分配Obstacle的位置，并测试
+        var MinBounds = transform.position - HalfExtent;
+        var MaxBounds = transform.position + HalfExtent;
+
+        for (var i = 0; i < Obstacles.Length; ++i)
+        {
+            var Obstacle = Obstacles[i];
+
+            var randomXPos = Random.Range(MinBounds.x, MaxBounds.x);
+            var randomZPos = Random.Range(MinBounds.z, MaxBounds.z);
+
+            var oldPosition = Obstacle.Shape.transform.position;
+            Obstacle.Shape.transform.position = new Vector3(randomXPos, oldPosition.y, randomZPos);
+
+            var randomAngle = Random.Range(0.0f, 360.0f);
+            Obstacle.Shape.transform.rotation = Quaternion.Euler(0.0f, randomAngle, 0.0f);
+        }
+
+        Triangulation();
+    }
+
+    public void DumpObstacles()
+    {
+        for (var i = 0; i < Obstacles.Length; ++i)
+        {
+            var Obstacle = Obstacles[i];
+
+            Debug.LogError($"Obstacle[{i}], pos:{Obstacle.Shape.transform.position}, rot:{Obstacle.Shape.transform.rotation}");
+        }
     }
 }
