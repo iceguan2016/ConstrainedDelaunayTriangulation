@@ -378,7 +378,7 @@ namespace Navmesh
             var center = GetCenter();
             center.y = 0;
 
-            float scale = 0.95f;
+            float scale = InDebugParams.DrawShapeScale;
 
             for (int i = 0, ni= NumPoints; i < ni;i++)
             {
@@ -493,7 +493,7 @@ namespace Navmesh
 
 
             // Convex最小Edge长度
-            // var MinEdgeLength = 0.1f;
+            var MinEdgeLength = 0.05f;
             // Convex最小面积
             var MinConvexArea = 0.25f;
 
@@ -511,7 +511,7 @@ namespace Navmesh
             if (CurrConvexShape == null) return false;
             var Area = CurrConvexShape.GetArea();
             if (Area < MinConvexArea) return false;
-            // CurrConvexShape.MergeSmallEdge(MinEdgeLength);
+            CurrConvexShape.MergeSmallEdge(MinEdgeLength);
             if (!CurrConvexShape.IsValid) return false;
 
             // 2.添加约Shape，需要继续和已有的Convex做裁剪，因为Tirangulation算法要求Convex之间不能重叠
@@ -534,9 +534,15 @@ namespace Navmesh
                     if (CurrConvexShape.GetEdgePlane(j, out var P, out var N))
                     {
                         var Side = ClippedConvex.Split(P, N, out var OutFront, out var OutBack);
+                        if (OutBack != null && OutBack.GetArea() < MinConvexArea)
+                        {
+                            // 裁剪面积太小，忽略该裁剪
+                            continue;
+                        }
+
                         if (OutFront != null && OutFront.GetArea() >= MinConvexArea)
                         {
-                            // OutFront.MergeSmallEdge(MinEdgeLength);
+                            OutFront.MergeSmallEdge(MinEdgeLength);
                             if (OutFront.IsValid) Convexs.Add(OutFront);
                         }
                         ClippedConvex = OutBack;
@@ -885,6 +891,9 @@ namespace Navmesh
         // 调试使用
         private List<FSharedEdge> m_sharedEdges = null;
         private List<List<UnityEngine.Vector2>> m_constraintEdges = null;
+
+        public List<List<UnityEngine.Vector2>> MergedContours { get { return m_constraintEdges; } }
+
         public void DrawGizmos(FDebugParams InDebugParams)
         {
             var Colors = new UnityEngine.Color[] {

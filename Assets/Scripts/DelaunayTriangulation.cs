@@ -630,7 +630,8 @@ namespace Game.Utils.Triangulation
                 else
                 {
                     // Back to the list
-                    intersectedTriangleEdges.Insert(0, currentIntersectedTriangleEdge);
+                    // This will cause while loop can't end
+                    // intersectedTriangleEdges.Insert(0, currentIntersectedTriangleEdge);
                 }
             }
 

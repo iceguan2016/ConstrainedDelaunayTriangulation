@@ -10,6 +10,7 @@ public class FDebugParams
     public bool IsFindContour = true;
     public bool IsDrawConvexShape = true;
     public bool IsDrawConvexPoint = true;
+    public float DrawShapeScale = 0.95f;
     public bool IsDrawSharedEdges = false;
     public bool IsDrawMergedEdges = false;
     public bool IsDrawTrangulation = true;
@@ -142,6 +143,30 @@ public class UnitTest_TileData : MonoBehaviour
         Gizmos.color = OldColor;
     }
 
+    protected bool CheckTileTriangulationResult()
+    {
+        if (null == tileData) return false;
+        var MergedContours = tileData.MergedContours;
+        if (MergedContours.Count <= 0) return false;
+
+        for (var i = 0; i < MergedContours.Count; ++i)
+        {
+            var Contour = MergedContours[i];
+            // 检查是否首尾相连，且无重叠edge
+            for (var edgeIndex = 0; edgeIndex < Contour.Count; ++edgeIndex)
+            {
+                var edgeIndex1 = (edgeIndex + 1) % Contour.Count;
+                var edgeIndex2 = (edgeIndex1 + 1) % Contour.Count;
+                var dist = (Contour[edgeIndex] - Contour[edgeIndex2]).magnitude;
+                if (dist < 0.001f)
+                {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
     public void RandomTest()
     {
         if (Obstacles.Length <= 0) return;
@@ -168,6 +193,34 @@ public class UnitTest_TileData : MonoBehaviour
         }
 
         Triangulation();
+
+        if (IsLastTriangulationSuccess)
+        {
+            IsLastTriangulationSuccess = CheckTileTriangulationResult();
+        }
+    }
+
+    public void AutoTest()
+    {
+        if (Obstacles.Length <= 0) return;
+
+        if (IsLastTriangulationSuccess)
+        {
+            var MinBounds = transform.position - HalfExtent;
+            var MaxBounds = transform.position + HalfExtent;
+
+            var GapDistance = 0.5f;
+            for (var i = 0; i < Obstacles.Length && IsLastTriangulationSuccess; ++i)
+            {
+                for (var j = i + 1; j < Obstacles.Length && IsLastTriangulationSuccess; ++j)
+                {
+                    for (var k = j + 1; k < Obstacles.Length && IsLastTriangulationSuccess; ++k)
+                    {
+                        IsLastTriangulationSuccess = CheckTileTriangulationResult();
+                    }
+                }
+            }
+        }
     }
 
     public void DumpObstacles()
