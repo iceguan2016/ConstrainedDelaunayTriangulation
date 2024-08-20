@@ -147,8 +147,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 301608482}
-  m_LocalRotation: {x: 0, y: 0.8449797, z: 0, w: 0.5347984}
-  m_LocalPosition: {x: 6.827694, y: -0.06999999, z: -5.9075556}
+  m_LocalRotation: {x: 0, y: 0.53850234, z: 0, w: -0.842624}
+  m_LocalPosition: {x: 12.333086, y: -0.06999999, z: -6.7451577}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1686871945}
@@ -400,8 +400,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 923281231}
-  m_LocalRotation: {x: 0, y: 0.50448436, z: 0, w: -0.86342084}
-  m_LocalPosition: {x: -5.0728655, y: -0.06999999, z: 1.069722}
+  m_LocalRotation: {x: 0, y: 0.99879456, z: 0, w: -0.04908548}
+  m_LocalPosition: {x: 0.8370285, y: -0.06999999, z: -15.442422}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1686871945}
@@ -444,8 +444,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1061848538}
-  m_LocalRotation: {x: 0, y: 0.25399032, z: 0, w: -0.9672068}
-  m_LocalPosition: {x: -6.4818997, y: -0.06999999, z: -10.950742}
+  m_LocalRotation: {x: 0, y: 0.55004644, z: 0, w: 0.835134}
+  m_LocalPosition: {x: -12.229513, y: -0.06999999, z: 18.843134}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1686871945}
@@ -488,8 +488,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1473378247}
-  m_LocalRotation: {x: 0, y: 0.85203, z: 0, w: -0.523493}
-  m_LocalPosition: {x: -2.2776127, y: -0.06999999, z: -1.5571104}
+  m_LocalRotation: {x: 0, y: 0.122704685, z: 0, w: 0.9924432}
+  m_LocalPosition: {x: 2.0234475, y: -0.06999999, z: -7.757216}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 1686871945}
@@ -557,7 +557,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64fcf09a40518a34b8a8673e7bf162ae, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  HalfExtent: {x: 11.37, y: 7.8, z: 12.64}
+  HalfExtent: {x: 15.59, y: 7.8, z: 21.3}
   Obstacles:
   - Shape: {fileID: 1061848540}
     IsAdd: 1
@@ -571,7 +571,7 @@ MonoBehaviour:
   DebugParams:
     IsTrangulation: 0
     IsFindContour: 1
-    IsDrawConvexShape: 1
+    IsDrawConvexShape: 0
     IsDrawConvexPoint: 1
     DrawShapeScale: 0.95
     IsDrawSharedEdges: 0

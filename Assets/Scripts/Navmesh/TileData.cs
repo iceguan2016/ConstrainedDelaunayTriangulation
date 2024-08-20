@@ -681,12 +681,23 @@ namespace Navmesh
                                 {
                                     proj_dist[k] = UnityEngine.Vector3.Dot(v[k], dirA);
                                     dist[k] = (v[k] - proj_dist[k] * dirA).magnitude;
-                                    if (!isNearlyEqual(dist[k], 0.0f, float_cmp_tolerance))
+                                    if (!isNearlyEqual(dist[k], 0.0f, 0.05f))
                                     {
                                         is_collinear = false;
                                         break;
                                     }
                                 }
+                                // 计算夹角(不可行)
+                                //if (!is_collinear)
+                                //{
+                                //    var dot = UnityEngine.Vector3.Dot(dirA, dirB);
+                                //    var cos_cmp_tolerance = 0.001f;
+                                //    var t_is_collinear = isNearlyEqual(dot, -1.0f, cos_cmp_tolerance) || isNearlyEqual(dot, 1.0f, cos_cmp_tolerance);
+                                //    if (t_is_collinear)
+                                //    {
+                                //        int stop = 0;
+                                //    }
+                                //}
                                 if (!is_collinear) continue;
 
                                 // 检查位置关系
@@ -879,13 +890,22 @@ namespace Navmesh
             }
 
             // 4.三角剖分 
+            bool IsTriangulationSuccess = true;
             if (InDebugParams.IsTrangulation)
             {
-                float TesselationMaximumTriangleArea = 0.0f;
-                Triangulation = new Game.Utils.Triangulation.DelaunayTriangulation();
-                Triangulation.Triangulate(pointsToTriangulate, TesselationMaximumTriangleArea, constrainedEdgePoints);
+                try
+                {
+                    float TesselationMaximumTriangleArea = 0.0f;
+                    Triangulation = new Game.Utils.Triangulation.DelaunayTriangulation();
+                    Triangulation.Triangulate(pointsToTriangulate, TesselationMaximumTriangleArea, constrainedEdgePoints);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(e.Message);
+                    IsTriangulationSuccess = false;
+                }
             }
-            return true;
+            return IsTriangulationSuccess;
         }
 
         // 调试使用
