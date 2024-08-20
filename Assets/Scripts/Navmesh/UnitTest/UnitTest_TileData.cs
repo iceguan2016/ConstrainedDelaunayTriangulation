@@ -7,6 +7,7 @@ using UnityEngine;
 public class FDebugParams
 {
     public bool IsTrangulation = true;
+    public bool IsFindContour = true;
     public bool IsDrawConvexShape = true;
     public bool IsDrawConvexPoint = true;
     public bool IsDrawSharedEdges = false;
@@ -74,6 +75,7 @@ public class UnitTest_TileData : MonoBehaviour
     public void Triangulation()
     {
         tileData = new Navmesh.FTileData();
+        triangle2Ds.Clear();
 
         Navmesh.FTileData.FInitTileDataParams Params;
         Params.TileX = 0;
@@ -96,7 +98,6 @@ public class UnitTest_TileData : MonoBehaviour
             {
                 var endTime = Time.realtimeSinceStartupAsDouble;
 
-                triangle2Ds.Clear();
                 if (tileData.Triangulation != null) tileData.Triangulation.GetTrianglesDiscardingHoles(triangle2Ds);
 
                 // if (VisualRepresentation != null) VisualRepresentation.mesh = CreateMeshFromTriangles(triangle2Ds);
