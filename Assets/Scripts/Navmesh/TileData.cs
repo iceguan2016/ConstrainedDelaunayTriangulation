@@ -11,6 +11,11 @@ using static UnityEngine.Rendering.DebugUI;
 
 namespace Navmesh
 {
+    public enum eTriangulationErrorCode
+    {
+        Success = 0,
+        FindCuntourLoopTimesExceeded,   // 循环次数超了
+    }
     public class FConvexShape
     {
         public enum eSide
@@ -488,7 +493,7 @@ namespace Navmesh
 
 
             // Convex最小Edge长度
-            var MinEdgeLength = 0.1f;
+            // var MinEdgeLength = 0.1f;
             // Convex最小面积
             var MinConvexArea = 0.25f;
 
@@ -572,7 +577,7 @@ namespace Navmesh
                 var convexSharedEdgeIndex = new int[numConvex][];
                 for (int i = 0; i < numConvex; ++i)
                 {
-                    var convex = ConvexShapes[i];
+                    // var convex = ConvexShapes[i];
                     var maxNumEdge = 50; // convex.NumEdges * 2;   // 因为会新增edge，这里预估一个最大的
                     convexSharedEdgeIndex[i] = new int[maxNumEdge];
                     for (var t = 0; t < maxNumEdge; ++t) convexSharedEdgeIndex[i][t] = -1;
@@ -587,32 +592,53 @@ namespace Navmesh
 
                 // Convex的edge插入新的点，之前已经构建过的sharedEdge对应索引都要进行修正
                 System.Func<int, int, bool> convexInsertNewEdge = (InConvexIndex, InNewEdgeIndex) => {
-                    for (var sharedEdgeIndex = 0; sharedEdgeIndex < sharedEdges.Count; ++sharedEdgeIndex)
+                    // 不能直接遍历sharedEdges数组，要遍历convexSharedEdgeIndex，确保顺序处理
+                    var numEdges = ConvexShapes[InConvexIndex].NumEdges;
+                    for (var i = numEdges-1; i >= InNewEdgeIndex; --i)
                     {
-                        var isChanged = false;
-                        var sharedEdge = sharedEdges[sharedEdgeIndex];
-                        int oldEdgeIndex = -1, newEdgeIndex = -1;
-                        if (sharedEdge.convexAIndex == InConvexIndex && sharedEdge.convexAEdgeIndex >= InNewEdgeIndex)
+                        var sharedEdgeIndex = convexSharedEdgeIndex[InConvexIndex][i];
+                        if (-1 != sharedEdgeIndex)
                         {
-                            oldEdgeIndex = sharedEdge.convexAEdgeIndex;
-                            ++sharedEdge.convexAEdgeIndex;
-                            newEdgeIndex = sharedEdge.convexAEdgeIndex;
-                            isChanged = true;
-                        }
-                        else if (sharedEdge.convexBIndex == InConvexIndex && sharedEdge.convexBEdgeIndex >= InNewEdgeIndex)
-                        {
-                            oldEdgeIndex = sharedEdge.convexBEdgeIndex;
-                            ++sharedEdge.convexBEdgeIndex;
-                            newEdgeIndex = sharedEdge.convexBEdgeIndex;
-                            isChanged = true;
-                        }
-                        if (isChanged) 
-                        {
+                            var sharedEdge = sharedEdges[sharedEdgeIndex];
+                            if (sharedEdge.convexAIndex == InConvexIndex && sharedEdge.convexAEdgeIndex >= InNewEdgeIndex)
+                            {
+                                ++sharedEdge.convexAEdgeIndex;
+                            }
+                            else if (sharedEdge.convexBIndex == InConvexIndex && sharedEdge.convexBEdgeIndex >= InNewEdgeIndex)
+                            {
+                                ++sharedEdge.convexBEdgeIndex;
+                            }
                             sharedEdges[sharedEdgeIndex] = sharedEdge;
-                            convexSharedEdgeIndex[InConvexIndex][oldEdgeIndex] = -1;
-                            convexSharedEdgeIndex[InConvexIndex][newEdgeIndex] = sharedEdgeIndex;
+                            convexSharedEdgeIndex[InConvexIndex][i] = -1;
+                            convexSharedEdgeIndex[InConvexIndex][i+1] = sharedEdgeIndex;
                         }
                     }
+                    //for (var sharedEdgeIndex = 0; sharedEdgeIndex < sharedEdges.Count; ++sharedEdgeIndex)
+                    //{
+                    //    var isChanged = false;
+                    //    var sharedEdge = sharedEdges[sharedEdgeIndex];
+                    //    int oldEdgeIndex = -1, newEdgeIndex = -1;
+                    //    if (sharedEdge.convexAIndex == InConvexIndex && sharedEdge.convexAEdgeIndex >= InNewEdgeIndex)
+                    //    {
+                    //        oldEdgeIndex = sharedEdge.convexAEdgeIndex;
+                    //        ++sharedEdge.convexAEdgeIndex;
+                    //        newEdgeIndex = sharedEdge.convexAEdgeIndex;
+                    //        isChanged = true;
+                    //    }
+                    //    else if (sharedEdge.convexBIndex == InConvexIndex && sharedEdge.convexBEdgeIndex >= InNewEdgeIndex)
+                    //    {
+                    //        oldEdgeIndex = sharedEdge.convexBEdgeIndex;
+                    //        ++sharedEdge.convexBEdgeIndex;
+                    //        newEdgeIndex = sharedEdge.convexBEdgeIndex;
+                    //        isChanged = true;
+                    //    }
+                    //    if (isChanged) 
+                    //    {
+                    //        sharedEdges[sharedEdgeIndex] = sharedEdge;
+                    //        convexSharedEdgeIndex[InConvexIndex][oldEdgeIndex] = -1;
+                    //        convexSharedEdgeIndex[InConvexIndex][newEdgeIndex] = sharedEdgeIndex;
+                    //    }
+                    //}
                     return true;
                 };
 
@@ -799,7 +825,7 @@ namespace Navmesh
                         if (++loopTimes > 100)
                         {
                             Debug.LogError("Triangulate, fetch external edge loop too times!");
-                            break;
+                            return false;
                         }
 
                         if (currEdgeIndex >= convexSharedEdgeIndex[currConexIndex].Length)

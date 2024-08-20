@@ -44,6 +44,8 @@ public class UnitTest_TileData : MonoBehaviour
     private List<Triangle2D> triangle2Ds = new List<Triangle2D>();
     public List<Triangle2D> Triangle2Ds { get { return triangle2Ds; } }
 
+    private bool IsLastTriangulationSuccess = false;
+
     private Mesh CreateMeshFromTriangles(List<Triangle2D> triangles)
     {
         List<Vector3> vertices = new List<Vector3>(triangles.Count * 3);
@@ -101,9 +103,14 @@ public class UnitTest_TileData : MonoBehaviour
                 if (tileData.Triangulation != null) tileData.Triangulation.GetTrianglesDiscardingHoles(triangle2Ds);
 
                 // if (VisualRepresentation != null) VisualRepresentation.mesh = CreateMeshFromTriangles(triangle2Ds);
+                IsLastTriangulationSuccess = true;
 
                 var deltaTime = endTime - startTime;
                 Debug.Log($"Triangulate cost time: {deltaTime} seconds");
+            }
+            else
+            {
+                IsLastTriangulationSuccess = false;
             }
         }
     }
@@ -139,22 +146,25 @@ public class UnitTest_TileData : MonoBehaviour
     {
         if (Obstacles.Length <= 0) return;
 
-        //  随机分配Obstacle的位置，并测试
-        var MinBounds = transform.position - HalfExtent;
-        var MaxBounds = transform.position + HalfExtent;
-
-        for (var i = 0; i < Obstacles.Length; ++i)
+        if (IsLastTriangulationSuccess)
         {
-            var Obstacle = Obstacles[i];
+            //  随机分配Obstacle的位置，并测试
+            var MinBounds = transform.position - HalfExtent;
+            var MaxBounds = transform.position + HalfExtent;
 
-            var randomXPos = Random.Range(MinBounds.x, MaxBounds.x);
-            var randomZPos = Random.Range(MinBounds.z, MaxBounds.z);
+            for (var i = 0; i < Obstacles.Length; ++i)
+            {
+                var Obstacle = Obstacles[i];
 
-            var oldPosition = Obstacle.Shape.transform.position;
-            Obstacle.Shape.transform.position = new Vector3(randomXPos, oldPosition.y, randomZPos);
+                var randomXPos = Random.Range(MinBounds.x, MaxBounds.x);
+                var randomZPos = Random.Range(MinBounds.z, MaxBounds.z);
 
-            var randomAngle = Random.Range(0.0f, 360.0f);
-            Obstacle.Shape.transform.rotation = Quaternion.Euler(0.0f, randomAngle, 0.0f);
+                var oldPosition = Obstacle.Shape.transform.position;
+                Obstacle.Shape.transform.position = new Vector3(randomXPos, oldPosition.y, randomZPos);
+
+                var randomAngle = Random.Range(0.0f, 360.0f);
+                Obstacle.Shape.transform.rotation = Quaternion.Euler(0.0f, randomAngle, 0.0f);
+            }
         }
 
         Triangulation();
