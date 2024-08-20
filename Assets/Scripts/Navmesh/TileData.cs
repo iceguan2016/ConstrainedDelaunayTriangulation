@@ -893,17 +893,17 @@ namespace Navmesh
             bool IsTriangulationSuccess = true;
             if (InDebugParams.IsTrangulation)
             {
-                try
+                //try
                 {
                     float TesselationMaximumTriangleArea = 0.0f;
                     Triangulation = new Game.Utils.Triangulation.DelaunayTriangulation();
                     Triangulation.Triangulate(pointsToTriangulate, TesselationMaximumTriangleArea, constrainedEdgePoints);
                 }
-                catch (Exception e)
-                {
-                    Debug.LogError(e.Message);
-                    IsTriangulationSuccess = false;
-                }
+                //catch (Exception e)
+                //{
+                //    Debug.LogError(e.Message);
+                //    IsTriangulationSuccess = false;
+                //}
             }
             return IsTriangulationSuccess;
         }

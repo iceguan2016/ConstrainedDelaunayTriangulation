@@ -558,8 +558,15 @@ namespace Game.Utils.Triangulation
 
             List<DelaunayTriangleEdge> newEdges = new List<DelaunayTriangleEdge>();
 
+            int loopTimes = 0;
             while (intersectedTriangleEdges.Count > 0)
             {
+                if (++loopTimes > 500)
+                {
+                    Debug.LogError($"AddConstrainedEdgeToTriangulation loop time exceeded! loopTimes:{loopTimes}");
+                    break;
+                }
+
                 DelaunayTriangleEdge currentIntersectedTriangleEdge = intersectedTriangleEdges[intersectedTriangleEdges.Count - 1];
                 intersectedTriangleEdges.RemoveAt(intersectedTriangleEdges.Count - 1);
 
@@ -631,7 +638,7 @@ namespace Game.Utils.Triangulation
                 {
                     // Back to the list
                     // This will cause while loop can't end
-                    // intersectedTriangleEdges.Insert(0, currentIntersectedTriangleEdge);
+                    intersectedTriangleEdges.Insert(0, currentIntersectedTriangleEdge);
                 }
             }
 

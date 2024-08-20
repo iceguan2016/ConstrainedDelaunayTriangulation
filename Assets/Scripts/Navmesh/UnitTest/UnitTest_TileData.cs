@@ -104,7 +104,7 @@ public class UnitTest_TileData : MonoBehaviour
                 if (tileData.Triangulation != null) tileData.Triangulation.GetTrianglesDiscardingHoles(triangle2Ds);
 
                 // if (VisualRepresentation != null) VisualRepresentation.mesh = CreateMeshFromTriangles(triangle2Ds);
-                IsLastTriangulationSuccess = true;
+                IsLastTriangulationSuccess = CheckTileTriangulationResult();
 
                 var deltaTime = endTime - startTime;
                 Debug.Log($"Triangulate cost time: {deltaTime} seconds");
@@ -112,6 +112,11 @@ public class UnitTest_TileData : MonoBehaviour
             else
             {
                 IsLastTriangulationSuccess = false;
+            }
+
+            if (!IsLastTriangulationSuccess)
+            {
+                Debug.LogError("IsLastTriangulationSuccess failed!");
             }
         }
     }
