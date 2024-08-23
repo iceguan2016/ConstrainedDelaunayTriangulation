@@ -130,8 +130,6 @@ namespace Navmesh
 			/** Tile vertices */
 			public Int3[] verts;
 
-			public UnityEngine.Vector2[] points;
-
 			/** Tile X Coordinate */
 			public int x;
 
@@ -444,9 +442,7 @@ namespace Navmesh
 				for (int vertexIndex = 0; vertexIndex < tile.verts.Length; ++vertexIndex)
 				{
 					var v = (UnityEngine.Vector3)tile.verts[vertexIndex];
-					var p = tile.points[vertexIndex].toVector3(0.0f);
-					var iv = new Int3(p);
-					UnityEngine.Gizmos.DrawSphere(p, 0.1f);
+					UnityEngine.Gizmos.DrawSphere(v, 0.1f);
 				}
 			}
 		}

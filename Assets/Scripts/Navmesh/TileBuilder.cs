@@ -981,7 +981,6 @@ namespace Navmesh
             tile.d = 1;
             tile.tris = triangles.ToArray();
             tile.verts = verts.ToArray();
-            tile.points = points.ToArray();
             //tile.bbTree = new BBTree(tile);
 
             if (tile.tris.Length % 3 != 0) throw new System.ArgumentException("Indices array's length must be a multiple of 3 (mesh.tris)");
@@ -1024,7 +1023,7 @@ namespace Navmesh
 
                 node.Walkable = true;
                 //node.Penalty = initialPenalty;
-                //node.UpdatePositionFromVertices();
+                node.UpdatePositionFromVertices();
                 //tile.bbTree.Insert(node);
             }
 

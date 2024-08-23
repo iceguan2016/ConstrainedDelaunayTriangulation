@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Navmesh.Core
 {
-    public class Int3
+    public struct Int3
     {
         public int x;
         public int y;
