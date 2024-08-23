@@ -39,8 +39,8 @@ public class UnitTest_TileData : MonoBehaviour
     [Tooltip("The debug visulize params")]
     public FDebugParams DebugParams;
 
-    private Navmesh.FTileData tileData;
-    public Navmesh.FTileData TileData { get { return tileData; } }
+    private Navmesh.FTileBuilder tileData;
+    public Navmesh.FTileBuilder TileData { get { return tileData; } }
 
     private List<Triangle2D> triangle2Ds = new List<Triangle2D>();
     public List<Triangle2D> Triangle2Ds { get { return triangle2Ds; } }
@@ -77,10 +77,10 @@ public class UnitTest_TileData : MonoBehaviour
 
     public void Triangulation()
     {
-        tileData = new Navmesh.FTileData();
+        tileData = new Navmesh.FTileBuilder();
         triangle2Ds.Clear();
 
-        Navmesh.FTileData.FInitTileDataParams Params;
+        Navmesh.FTileBuilder.FInitTileBuilderParams Params;
         Params.TileX = 0;
         Params.TileZ = 0;
         Params.MinBounds = transform.position - HalfExtent;
@@ -202,29 +202,6 @@ public class UnitTest_TileData : MonoBehaviour
         if (IsLastTriangulationSuccess)
         {
             IsLastTriangulationSuccess = CheckTileTriangulationResult();
-        }
-    }
-
-    public void AutoTest()
-    {
-        if (Obstacles.Length <= 0) return;
-
-        if (IsLastTriangulationSuccess)
-        {
-            var MinBounds = transform.position - HalfExtent;
-            var MaxBounds = transform.position + HalfExtent;
-
-            var GapDistance = 0.5f;
-            for (var i = 0; i < Obstacles.Length && IsLastTriangulationSuccess; ++i)
-            {
-                for (var j = i + 1; j < Obstacles.Length && IsLastTriangulationSuccess; ++j)
-                {
-                    for (var k = j + 1; k < Obstacles.Length && IsLastTriangulationSuccess; ++k)
-                    {
-                        IsLastTriangulationSuccess = CheckTileTriangulationResult();
-                    }
-                }
-            }
         }
     }
 

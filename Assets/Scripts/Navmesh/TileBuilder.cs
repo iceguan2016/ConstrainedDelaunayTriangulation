@@ -1,13 +1,8 @@
 
-using Microsoft.SqlServer.Server;
-using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Reflection;
-using System.Security.Cryptography;
-using UnityEditor.PackageManager;
-using UnityEngine;
-using static UnityEngine.Rendering.DebugUI;
+
+using Navmesh.Core;
+using Navmesh.Nodes;
 
 namespace Navmesh
 {
@@ -85,13 +80,13 @@ namespace Navmesh
             MinBounds = MaxBounds = Vertices[0];
             for (var i = 1; i < Vertices.Count; ++i)
             {
-                MinBounds[0] = Mathf.Min(MinBounds[0], Vertices[i][0]);
-                MinBounds[1] = Mathf.Min(MinBounds[1], Vertices[i][1]);
-                MinBounds[2] = Mathf.Min(MinBounds[2], Vertices[i][2]);
+                MinBounds[0] = UnityEngine.Mathf.Min(MinBounds[0], Vertices[i][0]);
+                MinBounds[1] = UnityEngine.Mathf.Min(MinBounds[1], Vertices[i][1]);
+                MinBounds[2] = UnityEngine.Mathf.Min(MinBounds[2], Vertices[i][2]);
 
-                MaxBounds[0] = Mathf.Max(MaxBounds[0], Vertices[i][0]);
-                MaxBounds[1] = Mathf.Max(MaxBounds[1], Vertices[i][1]);
-                MaxBounds[2] = Mathf.Max(MaxBounds[2], Vertices[i][2]);
+                MaxBounds[0] = UnityEngine.Mathf.Max(MaxBounds[0], Vertices[i][0]);
+                MaxBounds[1] = UnityEngine.Mathf.Max(MaxBounds[1], Vertices[i][1]);
+                MaxBounds[2] = UnityEngine.Mathf.Max(MaxBounds[2], Vertices[i][2]);
             }
         }
 
@@ -358,6 +353,22 @@ namespace Navmesh
             return true;
         }
 
+        public bool IsOverlapWith2D(UnityEngine.Vector3 InMinBounds, UnityEngine.Vector3 InMaxBounds)
+        {
+            // 
+            if (MaxBounds[0] < InMinBounds[0] || InMaxBounds[0] < MinBounds[0])
+            {
+                return false;
+            }
+
+            if (MaxBounds[2] < InMinBounds[2] || InMaxBounds[2] < MinBounds[2])
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         public FConvexShape Clone()
         {
             return  new FConvexShape(new List<UnityEngine.Vector3>(Vertices));
@@ -373,7 +384,7 @@ namespace Navmesh
             outputPolygons.Add(points);
         }
 
-        public void DrawGizmos(FDebugParams InDebugParams, Color c)
+        public void DrawGizmos(FDebugParams InDebugParams, UnityEngine.Color c)
         {
             var center = GetCenter();
             center.y = 0;
@@ -382,7 +393,7 @@ namespace Navmesh
 
             for (int i = 0, ni= NumPoints; i < ni;i++)
             {
-                Gizmos.color = c;
+                UnityEngine.Gizmos.color = c;
 
                 int ii = (i+1)%ni;
                 var v0 = Vertices[i]; v0.y = 0.0f;
@@ -390,11 +401,11 @@ namespace Navmesh
 
                 v0 = center + (v0 - center) * scale;
                 v1 = center + (v1 - center) * scale;
-                Gizmos.DrawLine(v0, v1);
+                UnityEngine.Gizmos.DrawLine(v0, v1);
 
                 if (GetEdgePlane(i, out var p, out var n))
                 {
-                    Gizmos.DrawLine(v0, v0 + n * 0.3f);
+                    UnityEngine.Gizmos.DrawLine(v0, v0 + n * 0.3f);
                 }
 
                 if (InDebugParams.IsDrawConvexPoint)
@@ -402,24 +413,24 @@ namespace Navmesh
                     var pointSize = 0.05f;
                     if (i == 0)
                     {
-                        Gizmos.color = Color.red;
-                        Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
+                        UnityEngine.Gizmos.color = UnityEngine.Color.red;
+                        UnityEngine.Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
                     }
                     else if (i == 1)
                     {
-                        Gizmos.color = Color.blue;
-                        Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
+                        UnityEngine.Gizmos.color = UnityEngine.Color.blue;
+                        UnityEngine.Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
                     }
                     else
                     {
-                        Gizmos.color = Color.green;
-                        Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
+                        UnityEngine.Gizmos.color = UnityEngine.Color.green;
+                        UnityEngine.Gizmos.DrawCube(v0, UnityEngine.Vector3.one * pointSize);
                     }
                 }
             }
         }
 
-        public void DrawConvex(Color c)
+        public void DrawConvex(UnityEngine.Color c)
         {
             var center = GetCenter();
             center.y = 0;
@@ -428,21 +439,19 @@ namespace Navmesh
 
             for (int i = 0, ni = NumPoints; i < ni; i++)
             {
-                Gizmos.color = c;
-
                 int ii = (i + 1) % ni;
                 var v0 = Vertices[i]; v0.y = 0.0f;
                 var v1 = Vertices[ii]; v1.y = 0.0f;
 
                 v0 = center + (v0 - center) * scale;
                 v1 = center + (v1 - center) * scale;
-                Debug.DrawLine(v0, v1, c, 1.0f, false);
+                UnityEngine.Debug.DrawLine(v0, v1, c, 1.0f, false);
             }
         }
     }
 
-    public class FTileData
-    { 
+    public class FTileBuilder
+    {
         public int TileX { get; private set; }
         public int TileZ { get; private set; }
         public UnityEngine.Vector3 MinBounds { get; private set; }
@@ -452,14 +461,14 @@ namespace Navmesh
 
         public List<FConvexShape> ConvexShapes { get; private set; }
 
-        public struct FInitTileDataParams
+        public struct FInitTileBuilderParams
         {
             public int TileX;
             public int TileZ;
             public UnityEngine.Vector3 MinBounds;
             public UnityEngine.Vector3 MaxBounds;
         }
-        public bool Initialize(FInitTileDataParams InParams)
+        public bool Initialize(FInitTileBuilderParams InParams)
         {
             TileX = InParams.TileX; 
             TileZ = InParams.TileZ;
@@ -590,7 +599,7 @@ namespace Navmesh
                 }
 
                 System.Func<float, float, float, bool> isNearlyEqual = (a, b, t) => {
-                    return Mathf.Abs(a - b) < t;
+                    return System.Math.Abs(a - b) < t;
                 };
                 var float_cmp_tolerance = 0.01f;
 
@@ -841,13 +850,13 @@ namespace Navmesh
                     {
                         if (++loopTimes > 100)
                         {
-                            Debug.LogError("Triangulate, fetch external edge loop too times!");
+                            UnityEngine.Debug.LogError("Triangulate, fetch external edge loop too times!");
                             return false;
                         }
 
                         if (currEdgeIndex >= convexSharedEdgeIndex[currConexIndex].Length)
                         {
-                            Debug.LogError($"Triangulate, convexSharedEdgeIndex maxNumEdge too small!, current size:{convexSharedEdgeIndex[currConexIndex].Length}");
+                            UnityEngine.Debug.LogError($"Triangulate, convexSharedEdgeIndex maxNumEdge too small!, current size:{convexSharedEdgeIndex[currConexIndex].Length}");
                         }
 
                         var sharedEdgeIndex = convexSharedEdgeIndex[currConexIndex][currEdgeIndex];
@@ -908,6 +917,154 @@ namespace Navmesh
             return IsTriangulationSuccess;
         }
 
+        public FTiledNavmeshGraph.FNavmeshTile CreateNavmeshTile(FTiledNavmeshGraph navmeshGraph)
+        {
+            if (Triangulation == null) throw new System.ArgumentNullException("triangulation");
+
+            var discardTriangles = Triangulation.DiscardedTriangles;
+            var points = Triangulation.TriangleSet.Points;
+            var totalTriangles = Triangulation.TriangleSet.TriangleCount;
+
+            var verts = new List<Int3>();
+            for (var vertexIndex = 0; vertexIndex < points.Count; ++vertexIndex)
+            {
+                var v = new UnityEngine.Vector3(points[vertexIndex][0], 0.0f, points[vertexIndex][1]);
+                verts.Add(new Int3(v));
+            }
+
+            var triangles = new List<int>();
+            triangles.Capacity = totalTriangles * 3;
+            var adjacents = new List<int>();
+            adjacents.Capacity = totalTriangles * 3;
+
+            var triangleIndexMap = new Dictionary<int, int>();
+            var triangleIndexMap2 = new Dictionary<int, int>();
+            for (var triangleIndex = 0; triangleIndex < totalTriangles; ++triangleIndex)
+            {
+                bool isTriangleToBeRemoved = false;
+
+                // Is the triangle in the "To Remove" list?
+                for (int j = 0; j < discardTriangles.Count; ++j)
+                {
+                    if (discardTriangles[j] >= triangleIndex)
+                    {
+                        //m_trianglesToRemove.RemoveAt(j);
+                        isTriangleToBeRemoved = discardTriangles[j] == triangleIndex;
+                        break;
+                    }
+                }
+
+                if (!isTriangleToBeRemoved)
+                {
+                    unsafe
+                    {
+                        // map old and new triangle index
+                        triangleIndexMap.Add(triangleIndex, triangles.Count);
+                        triangleIndexMap2.Add(triangles.Count, triangleIndex);
+
+                        var triangle = Triangulation.TriangleSet.GetTriangle(triangleIndex);
+                        triangles.Add(triangle.p[0]);
+                        triangles.Add(triangle.p[1]);
+                        triangles.Add(triangle.p[2]);
+                    }
+                }
+            }
+
+            //Create a new navmesh tile and assign its settings
+            var tile = new FTiledNavmeshGraph.FNavmeshTile();
+
+            tile.x = TileX;
+            tile.z = TileZ;
+            tile.w = 1;
+            tile.d = 1;
+            tile.tris = triangles.ToArray();
+            tile.verts = verts.ToArray();
+            //tile.bbTree = new BBTree(tile);
+
+            if (tile.tris.Length % 3 != 0) throw new System.ArgumentException("Indices array's length must be a multiple of 3 (mesh.tris)");
+
+            if (tile.verts.Length >= FTiledNavmeshGraph.VertexIndexMask) throw new System.ArgumentException("Too many vertices per tile (more than " + FTiledNavmeshGraph.VertexIndexMask + ")." +
+                "\nTry enabling ASTAR_RECAST_LARGER_TILES under the 'Optimizations' tab in the A* Inspector");
+
+            var nodes = new TriangleMeshNode[tile.tris.Length / 3];
+            tile.nodes = nodes;
+
+            //This index will be ORed to the triangle indices
+            int tileIndex = TileX + TileZ * navmeshGraph.tileXCount;
+            tileIndex <<= FTiledNavmeshGraph.TileIndexOffset;
+
+            var graphIndex = FNavgationSystem.instance.graphs.Length;
+            TriangleMeshNode.SetNavmeshHolder(graphIndex, tile);
+
+            //Create nodes and assign triangle indices
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                var node = new TriangleMeshNode();
+                nodes[i] = node;
+                node.GraphIndex = (uint)graphIndex;
+                node.v0 = tile.tris[i * 3 + 0] | tileIndex;
+                node.v1 = tile.tris[i * 3 + 1] | tileIndex;
+                node.v2 = tile.tris[i * 3 + 2] | tileIndex;
+
+                //Degenerate triangles might occur, but they will not cause any large troubles anymore
+                //if (Polygon.IsColinear (node.GetVertex(0), node.GetVertex(1), node.GetVertex(2))) {
+                //	Debug.Log ("COLINEAR!!!!!!");
+                //}
+
+                //Make sure the triangle is clockwise
+                //if (!Polygon.IsClockwise(node.GetVertex(0), node.GetVertex(1), node.GetVertex(2)))
+                //{
+                //    int tmp = node.v0;
+                //    node.v0 = node.v2;
+                //    node.v2 = tmp;
+                //}
+
+                node.Walkable = true;
+                //node.Penalty = initialPenalty;
+                node.UpdatePositionFromVertices();
+                //tile.bbTree.Insert(node);
+            }
+
+            TriangleMeshNode.SetNavmeshHolder(graphIndex, null);
+
+            //Create connections between all nodes.
+            List<MeshNode> connections = new List<MeshNode>();
+            List<uint> connectionCosts = new List<uint>();
+            for (int i=0;i<nodes.Length;i++) 
+            {
+				var node = nodes[i];
+                connections.Clear();
+                connectionCosts.Clear();
+
+                var isFind = triangleIndexMap2.TryGetValue(i, out var triangleIndex);
+                UnityEngine.Debug.Assert(isFind);
+
+                var triangle = Triangulation.TriangleSet.GetTriangle(triangleIndex);
+                unsafe
+                {
+                    for (var j=0; j<3; ++j)
+                    {
+                        var neighborTriangleIndex = triangle.adjacent[j];
+                        // If not find, neighborTriangleIndex is removed triangle!
+                        if (!triangleIndexMap.TryGetValue(neighborTriangleIndex, out var neighborNodeIndex))
+                        {
+                            continue;
+                        }
+
+                        var neighborNode = nodes[neighborNodeIndex];
+                        uint cost = (uint)(node.position - neighborNode.position).costMagnitude;
+                        connections.Add(neighborNode);
+                        connectionCosts.Add(cost);
+                    }
+                }
+
+                node.connections = connections.ToArray();
+                node.connectionCosts = connectionCosts.ToArray();
+            }
+
+            return null;
+        }
+
         // µ÷ÊÔÊ¹ÓÃ
         private List<FSharedEdge> m_sharedEdges = null;
         private List<List<UnityEngine.Vector2>> m_constraintEdges = null;
@@ -930,13 +1087,13 @@ namespace Navmesh
                 new UnityEngine.Vector3(MinBounds[0], MinBounds[1], MaxBounds[2]), new UnityEngine.Vector3(0.0f, 0.0f, 1.0f),
             };
 
-            Gizmos.color = Color.magenta;
+            UnityEngine.Gizmos.color = UnityEngine.Color.magenta;
             for (int i = 0; i < 4; i++)
             {
                 var p = ClipPlanes[i * 2];
                 var n = ClipPlanes[i * 2 + 1];
-                Gizmos.DrawCube(p, UnityEngine.Vector3.one * 0.1f);
-                Gizmos.DrawLine(p, p + n);
+                UnityEngine.Gizmos.DrawCube(p, UnityEngine.Vector3.one * 0.1f);
+                UnityEngine.Gizmos.DrawLine(p, p + n);
             }
 
             // draw convex shape
@@ -964,14 +1121,14 @@ namespace Navmesh
                     var p1 = convex[(convexEdgeIndex+1)%convex.NumPoints];
                     p1.y = 0;
 
-                    Gizmos.color = Color.cyan;
-                    Gizmos.DrawLine(p0, p1);
+                    UnityEngine.Gizmos.color = UnityEngine.Color.cyan;
+                    UnityEngine.Gizmos.DrawLine(p0, p1);
                 }
             }
 
             if (InDebugParams.IsDrawMergedEdges && null != m_constraintEdges && m_constraintEdges.Count > 0)
             {
-                Gizmos.color = Color.magenta;
+                UnityEngine.Gizmos.color = UnityEngine.Color.magenta;
                 for (var i=0; i<m_constraintEdges.Count; ++i)
                 {
                     var hole = m_constraintEdges[i];
@@ -984,13 +1141,13 @@ namespace Navmesh
                         var v0 = new UnityEngine.Vector3(p0[0], 0, p0[1]);
                         var v1 = new UnityEngine.Vector3(p1[0], 0, p1[1]);
 
-                        Gizmos.DrawLine(v0, v1);
+                        UnityEngine.Gizmos.DrawLine(v0, v1);
                     }
                 }
             }
         }
 
-        public void DrawConvex(int convexIndex, Color color)
+        public void DrawConvex(int convexIndex, UnityEngine.Color color)
         {
             if (convexIndex >= 0 && convexIndex < ConvexShapes.Count)
             {
