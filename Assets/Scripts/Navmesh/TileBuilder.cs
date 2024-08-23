@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 using Navmesh.Core;
 using Navmesh.Nodes;
+using Navmesh.Utils;
 
 namespace Navmesh
 {
@@ -959,8 +960,9 @@ namespace Navmesh
                     unsafe
                     {
                         // map old and new triangle index
-                        triangleIndexMap.Add(triangleIndex, triangles.Count);
-                        triangleIndexMap2.Add(triangles.Count, triangleIndex);
+                        var newTriangleIndex = triangles.Count / 3;
+                        triangleIndexMap.Add(triangleIndex, newTriangleIndex);
+                        triangleIndexMap2.Add(newTriangleIndex, triangleIndex);
 
                         var triangle = Triangulation.TriangleSet.GetTriangle(triangleIndex);
                         triangles.Add(triangle.p[0]);
@@ -979,6 +981,7 @@ namespace Navmesh
             tile.d = 1;
             tile.tris = triangles.ToArray();
             tile.verts = verts.ToArray();
+            tile.points = points.ToArray();
             //tile.bbTree = new BBTree(tile);
 
             if (tile.tris.Length % 3 != 0) throw new System.ArgumentException("Indices array's length must be a multiple of 3 (mesh.tris)");
@@ -1021,7 +1024,7 @@ namespace Navmesh
 
                 node.Walkable = true;
                 //node.Penalty = initialPenalty;
-                node.UpdatePositionFromVertices();
+                //node.UpdatePositionFromVertices();
                 //tile.bbTree.Insert(node);
             }
 
@@ -1052,7 +1055,7 @@ namespace Navmesh
                         }
 
                         var neighborNode = nodes[neighborNodeIndex];
-                        uint cost = (uint)(node.position - neighborNode.position).costMagnitude;
+                        uint cost = 0; //(uint)(node.position - neighborNode.position).costMagnitude;
                         connections.Add(neighborNode);
                         connectionCosts.Add(cost);
                     }
@@ -1062,7 +1065,7 @@ namespace Navmesh
                 node.connectionCosts = connectionCosts.ToArray();
             }
 
-            return null;
+            return tile;
         }
 
         // µ˜ ‘ π”√
@@ -1144,6 +1147,55 @@ namespace Navmesh
                         UnityEngine.Gizmos.DrawLine(v0, v1);
                     }
                 }
+            }
+
+            if (InDebugParams.IsDrawTrangulation && null != Triangulation)
+            {
+                UnityEngine.Gizmos.color = UnityEngine.Color.green;
+
+                var discardTriangles = Triangulation.DiscardedTriangles;
+                var triangleCount = Triangulation.TriangleSet.TriangleCount;
+                var trianglePoints = Triangulation.TriangleSet.Points;
+
+                for (int i = 0; i < triangleCount; ++i)
+                {
+                    bool isTriangleToBeRemoved = false;
+
+                    // Is the triangle in the "To Remove" list?
+                    for (int j = 0; j < discardTriangles.Count; ++j)
+                    {
+                        if (discardTriangles[j] >= i)
+                        {
+                            //m_trianglesToRemove.RemoveAt(j);
+                            isTriangleToBeRemoved = discardTriangles[j] == i;
+                            break;
+                        }
+                    }
+
+                    if (!isTriangleToBeRemoved)
+                    {
+                        var triangle = Triangulation.TriangleSet.GetTriangle(i);
+
+                        unsafe
+                        {
+                            var v0 = trianglePoints[triangle.p[0]].toVector3(0.0f);
+                            var v1 = trianglePoints[triangle.p[1]].toVector3(0.0f);
+                            var v2 = trianglePoints[triangle.p[2]].toVector3(0.0f);
+
+                            UnityEngine.Gizmos.DrawLine(v0, v1);
+                            UnityEngine.Gizmos.DrawLine(v1, v2);
+                            UnityEngine.Gizmos.DrawLine(v2, v0);
+                        }
+                    }
+                }
+            }
+
+            {
+                UnityEngine.Gizmos.color = UnityEngine.Color.red;
+                UnityEngine.Gizmos.DrawSphere(MinBounds, 0.1f);
+
+                UnityEngine.Gizmos.color = UnityEngine.Color.blue;
+                UnityEngine.Gizmos.DrawSphere(MaxBounds, 0.1f);
             }
         }
 

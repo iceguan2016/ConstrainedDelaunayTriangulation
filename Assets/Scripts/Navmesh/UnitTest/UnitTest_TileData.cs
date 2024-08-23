@@ -16,6 +16,8 @@ public class FDebugParams
     public bool IsDrawTrangulation = true;
 
     public int LimitObstacleClipTimes = -1;
+    public int MinBuildTileIndex = -1;   // Only build tiles between MinBuildTileIndex and MaxBuildTileIndex
+    public int MaxBuildTileIndex = -1;
 }
 
 [System.Serializable]
@@ -39,11 +41,22 @@ public class UnitTest_TileData : MonoBehaviour
     [Tooltip("The debug visulize params")]
     public FDebugParams DebugParams;
 
-    private Navmesh.FTileBuilder tileData;
-    public Navmesh.FTileBuilder TileData { get { return tileData; } }
+    [Tooltip("Toggle whether use tiles")]
+    public bool IsUseTiles = true;
 
-    private List<Triangle2D> triangle2Ds = new List<Triangle2D>();
-    public List<Triangle2D> Triangle2Ds { get { return triangle2Ds; } }
+    [Tooltip("Voxel cell size")]
+    public float CellSize = 0.5f;
+
+    [Tooltip("Numbers of voxel cell for Tile")]
+    public int TileSize = 128;
+
+    private Navmesh.FNavgationSystem navgationSystem = null;
+
+    private Navmesh.FTileBuilder tileBuilder;
+    public Navmesh.FTileBuilder TileBuilder { get { return tileBuilder; } }
+
+    public Navmesh.FTiledNavmeshBuilder tiledNavmeshBuilder;
+    protected Navmesh.FTiledNavmeshGraph tiledNavmeshGraph = null;
 
     private bool IsLastTriangulationSuccess = false;
 
@@ -69,6 +82,12 @@ public class UnitTest_TileData : MonoBehaviour
         return mesh;
     }
 
+    private void Awake()
+    {
+        navgationSystem = new Navmesh.FNavgationSystem();
+        navgationSystem.Awake();
+    }
+
     // Start is called before the first frame update
     void Start()
     {
@@ -77,46 +96,59 @@ public class UnitTest_TileData : MonoBehaviour
 
     public void Triangulation()
     {
-        tileData = new Navmesh.FTileBuilder();
-        triangle2Ds.Clear();
-
-        Navmesh.FTileBuilder.FInitTileBuilderParams Params;
-        Params.TileX = 0;
-        Params.TileZ = 0;
-        Params.MinBounds = transform.position - HalfExtent;
-        Params.MaxBounds = transform.position + HalfExtent;
-
-        if (tileData.Initialize(Params))
+        if (IsUseTiles)
         {
-            for (int i = 0; i < Obstacles.Length; ++i)
+            tiledNavmeshBuilder = new Navmesh.FTiledNavmeshBuilder();
+
+            Navmesh.FTiledNavmeshBuilder.FTiledNavmeshBuilderParams builderParams;
+            builderParams.CellSize = CellSize;
+            builderParams.TileSize = TileSize;
+            builderParams.MinBounds = transform.position - HalfExtent;
+            builderParams.MaxBounds = transform.position + HalfExtent;
+            builderParams.Obstacles = new List<FObstacle>(Obstacles);
+
+            tiledNavmeshGraph = tiledNavmeshBuilder.Build(builderParams, DebugParams);
+        }
+        else
+        {
+            tileBuilder = new Navmesh.FTileBuilder();
+
+            Navmesh.FTileBuilder.FInitTileBuilderParams Params;
+            Params.TileX = 0;
+            Params.TileZ = 0;
+            Params.MinBounds = transform.position - HalfExtent;
+            Params.MaxBounds = transform.position + HalfExtent;
+
+            if (tileBuilder.Initialize(Params))
             {
-                if (!Obstacles[i].IsAdd) continue;
-                var Convex = Obstacles[i].Shape.GetConvexShape();
-                tileData.AddConvexShape(Convex, DebugParams);
-            }
+                for (int i = 0; i < Obstacles.Length; ++i)
+                {
+                    if (!Obstacles[i].IsAdd) continue;
+                    var Convex = Obstacles[i].Shape.GetConvexShape();
+                    tileBuilder.AddConvexShape(Convex, DebugParams);
+                }
 
-            var startTime = Time.realtimeSinceStartupAsDouble;
+                var startTime = Time.realtimeSinceStartupAsDouble;
 
-            if (tileData.Triangulate(DebugParams))
-            {
-                var endTime = Time.realtimeSinceStartupAsDouble;
+                if (tileBuilder.Triangulate(DebugParams))
+                {
+                    var endTime = Time.realtimeSinceStartupAsDouble;
 
-                if (tileData.Triangulation != null) tileData.Triangulation.GetTrianglesDiscardingHoles(triangle2Ds);
+                    // if (VisualRepresentation != null) VisualRepresentation.mesh = CreateMeshFromTriangles(triangle2Ds);
+                    IsLastTriangulationSuccess = CheckTileTriangulationResult();
 
-                // if (VisualRepresentation != null) VisualRepresentation.mesh = CreateMeshFromTriangles(triangle2Ds);
-                IsLastTriangulationSuccess = CheckTileTriangulationResult();
+                    var deltaTime = endTime - startTime;
+                    Debug.Log($"Triangulate cost time: {deltaTime} seconds");
+                }
+                else
+                {
+                    IsLastTriangulationSuccess = false;
+                }
 
-                var deltaTime = endTime - startTime;
-                Debug.Log($"Triangulate cost time: {deltaTime} seconds");
-            }
-            else
-            {
-                IsLastTriangulationSuccess = false;
-            }
-
-            if (!IsLastTriangulationSuccess)
-            {
-                Debug.LogError("IsLastTriangulationSuccess failed!");
+                if (!IsLastTriangulationSuccess)
+                {
+                    Debug.LogError("IsLastTriangulationSuccess failed!");
+                }
             }
         }
     }
@@ -128,30 +160,71 @@ public class UnitTest_TileData : MonoBehaviour
         Gizmos.color = Color.white;
         Gizmos.DrawWireCube(transform.position, HalfExtent*2);
 
-        if (DebugParams.IsDrawTrangulation)
+        if (IsUseTiles)
         {
-            Gizmos.color = Color.yellow;
-            for (int i = 0; i < triangle2Ds.Count; ++i)
-            {
-                var triangle = triangle2Ds[i];
-                var v0 = new Vector3(triangle.p0[0], transform.position.y, triangle.p0[1]);
-                var v1 = new Vector3(triangle.p1[0], transform.position.y, triangle.p1[1]);
-                var v2 = new Vector3(triangle.p2[0], transform.position.y, triangle.p2[1]);
-                Gizmos.DrawLine(v0, v1);
-                Gizmos.DrawLine(v1, v2);
-                Gizmos.DrawLine(v2, v0);
-            }
-        }
+            // Draw tile rects
+            var minBounds = transform.position - HalfExtent;
+            var maxBounds = transform.position + HalfExtent;
+            var boundSize = maxBounds - minBounds;
 
-        if (null != tileData) tileData.DrawGizmos(DebugParams);
+            // Voxel grid size
+            int gw = (int)(boundSize.x / CellSize + 0.5f);
+            int gd = (int)(boundSize.z / CellSize + 0.5f);
+
+            var tileSizeX = TileSize;
+            var tileSizeZ = TileSize;
+
+            // Number of tiles
+            int tw = (gw + tileSizeX - 1) / tileSizeX;
+            int td = (gd + tileSizeZ - 1) / tileSizeZ;
+
+            var tileXCount = tw;
+            var tileZCount = td;
+
+            for (int z = 0; z < tileZCount; ++z)
+			{
+				for (int x = 0; x < tileXCount; ++x)
+				{
+					// Calculate tile bounds
+                    var tileIndex = x + z * tileXCount;
+                    
+					// World size of tile
+					var tcsx = tileSizeX * CellSize;
+					var tcsz = tileSizeZ * CellSize;
+
+					var bounds = new UnityEngine.Bounds();
+					bounds.SetMinMax(new UnityEngine.Vector3(x * tcsx, 0, z * tcsz) + minBounds,
+								new UnityEngine.Vector3((x + 1) * tcsx + minBounds.x, minBounds.y, (z + 1) * tcsz + minBounds.z)
+						);
+
+                    var c = (DebugParams.MinBuildTileIndex <= tileIndex && tileIndex <= DebugParams.MaxBuildTileIndex) ? Color.red : Color.yellow;
+                    Gizmos.color = c;
+                    Gizmos.DrawWireCube(bounds.center, bounds.extents * 2);
+                }
+            }
+
+            if (null != tiledNavmeshGraph)
+            {
+                tiledNavmeshGraph.OnDrawGizmos(true);
+            }
+
+            //if (null != tiledNavmeshBuilder)
+            //{
+            //    tiledNavmeshBuilder.DrawGizmos(DebugParams);
+            //}
+        }
+        else
+        {
+            if (null != tileBuilder) tileBuilder.DrawGizmos(DebugParams);
+        }
 
         Gizmos.color = OldColor;
     }
 
     protected bool CheckTileTriangulationResult()
     {
-        if (null == tileData) return false;
-        var MergedContours = tileData.MergedContours;
+        if (null == tileBuilder) return false;
+        var MergedContours = tileBuilder.MergedContours;
         if (MergedContours.Count <= 0) return false;
 
         for (var i = 0; i < MergedContours.Count; ++i)

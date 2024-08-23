@@ -25,7 +25,7 @@ public class UnitTest_TileDataEditor : Editor
         serializedObject.ApplyModifiedProperties();
 
         var UnitTest = target as UnitTest_TileData;
-        var TileData = UnitTest.TileData;
+        var TileData = UnitTest.TileBuilder;
 
         if (TileData != null)
         {

@@ -99,6 +99,11 @@ namespace Navmesh
 		public float debugRoof = 20000;
 		#endregion
 
+		public void Awake()
+		{
+			instance = this;
+		}
+
 		/** Adds the specified graph to the #graphs array */
 		public void AddGraph(FNavGraph graph)
 		{

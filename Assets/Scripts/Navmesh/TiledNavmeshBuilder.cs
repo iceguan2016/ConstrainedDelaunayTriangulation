@@ -9,7 +9,7 @@ namespace Navmesh
     { 
 		protected FTileBuilder[] tileBuilders = null;
 
-        struct FTiledNavmeshBuilderParams
+        public struct FTiledNavmeshBuilderParams
         {
             public UnityEngine.Vector3 MinBounds;	// 
             public UnityEngine.Vector3 MaxBounds;
@@ -20,7 +20,7 @@ namespace Navmesh
 			public List<FObstacle> Obstacles; // Obstacles in the scence
         }
 
-		FTiledNavmeshGraph Build(FTiledNavmeshBuilderParams inparams, FDebugParams indebugPramas)
+		public FTiledNavmeshGraph Build(FTiledNavmeshBuilderParams inparams, FDebugParams indebugPramas)
 		{
 			FTiledNavmeshGraph graph = new FTiledNavmeshGraph();
 
@@ -59,6 +59,8 @@ namespace Navmesh
 				{
 					var tileIndex = x + z * graph.tileXCount;
 
+					if (indebugPramas.MinBuildTileIndex > tileIndex || tileIndex > indebugPramas.MaxBuildTileIndex) continue;
+
 					// Calculate tile bounds
 					var forcedBoundsMin = graph.forcedBounds.min;
 					var forcedBoundsMax = graph.forcedBounds.max;
@@ -87,14 +89,16 @@ namespace Navmesh
 
 					var bounds = new UnityEngine.Bounds();
 					bounds.SetMinMax(convexShape.MinBounds, convexShape.MaxBounds);
-					var rect = graph.GetTouchingTilesRound(bounds);
+					var rect = graph.GetTouchingTiles(bounds);
 
-					for (int z = rect.ymin; z < rect.ymax; ++z)
+					for (int z = rect.ymin; z <= rect.ymax; ++z)
 					{
-						for (int x = rect.xmin; x < rect.xmax; ++x)
+						for (int x = rect.xmin; x <= rect.xmax; ++x)
 						{
 							var tileIndex = x + z * graph.tileXCount;
-							tileBuilders[tileIndex].AddConvexShape(convexShape, indebugPramas);
+							var tileBuilder = tileBuilders[tileIndex];
+							if (null == tileBuilder) continue;
+							tileBuilder.AddConvexShape(convexShape, indebugPramas);
 						}
 					}
 				}
@@ -104,6 +108,8 @@ namespace Navmesh
 			for (int tileIndex = 0; tileIndex < tileBuilders.Length; ++tileIndex)
 			{
 				var tileBuilder = tileBuilders[tileIndex];
+				if (null == tileBuilder) continue;
+
 				if (tileBuilder.Triangulate(indebugPramas))
 				{
 					var tileNavmesh = tileBuilder.CreateNavmeshTile(graph);
@@ -113,6 +119,17 @@ namespace Navmesh
 					}
 				}
 			}
+
+			// Add new graph to NavgationSystem
+			FNavgationSystem.instance.AddGraph(graph);
+			// Assign correct graph indices.
+			var graphIndex = graph.graphIndex;
+			TriangleMeshNode.SetNavmeshHolder((int)graphIndex, graph);
+
+			graph.GetNodes(node => {
+				node.GraphIndex = graphIndex;
+				return true;
+			});
 
 			// Connect tile neighbors
 			for (int z = 0; z < td; z++)
@@ -124,14 +141,6 @@ namespace Navmesh
 				}
 			}
 
-			// Add new graph to NavgationSystem
-			FNavgationSystem.instance.AddGraph(graph);
-			// Assign correct graph indices.
-			var graphIndex = graph.graphIndex;
-			graph.GetNodes(node => {
-				node.GraphIndex = graphIndex;
-				return true;
-			});
 			return graph;
 		}
 
@@ -281,6 +290,20 @@ namespace Navmesh
 						}
 
 					}
+				}
+			}
+		}
+
+		public void DrawGizmos(FDebugParams InDebugParams)
+		{
+			if (null != tileBuilders)
+			{
+				for (int tileIndex = 0; tileIndex < tileBuilders.Length; ++tileIndex)
+				{
+					var tileBuilder = tileBuilders[tileIndex];
+					if (null == tileBuilder) continue;
+
+					tileBuilder.DrawGizmos(InDebugParams);
 				}
 			}
 		}

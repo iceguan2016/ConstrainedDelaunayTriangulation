@@ -1,5 +1,6 @@
 using Navmesh.Core;
 using Navmesh.Nodes;
+using Navmesh.Utils;
 
 namespace Navmesh
 {
@@ -128,6 +129,8 @@ namespace Navmesh
 
 			/** Tile vertices */
 			public Int3[] verts;
+
+			public UnityEngine.Vector2[] points;
 
 			/** Tile X Coordinate */
 			public int x;
@@ -264,31 +267,31 @@ namespace Navmesh
 			tiles[tileIndex] = null;
 		}
 
-		/** Returns an XZ bounds object with the bounds of a group of tiles.
+        /** Returns an XZ bounds object with the bounds of a group of tiles.
 		  * The bounds object is defined in world units.
 		  */
-		//public Bounds GetTileBounds(IntRect rect)
-		//{
-		//	return GetTileBounds(rect.xmin, rect.ymin, rect.Width, rect.Height);
-		//}
+        public UnityEngine.Bounds GetTileBounds(IntRect rect)
+        {
+            return GetTileBounds(rect.xmin, rect.ymin, rect.Width, rect.Height);
+        }
 
-		/** Returns an XZ bounds object with the bounds of a group of tiles.
+        /** Returns an XZ bounds object with the bounds of a group of tiles.
 		  * The bounds object is defined in world units.
 		  */
-		//public Bounds GetTileBounds(int x, int z, int width = 1, int depth = 1)
-		//{
-		//	var b = new Bounds();
-		//	b.SetMinMax(
-		//		new Vector3(x * tileSizeX * cellSize, 0, z * tileSizeZ * cellSize) + forcedBounds.min,
-		//		new Vector3((x + width) * tileSizeX * cellSize, forcedBounds.size.y, (z + depth) * tileSizeZ * cellSize) + forcedBounds.min
-		//	);
-		//	return b;
-		//}
+        public UnityEngine.Bounds GetTileBounds(int x, int z, int width = 1, int depth = 1)
+        {
+            var b = new UnityEngine.Bounds();
+            b.SetMinMax(
+                new UnityEngine.Vector3(x * tileSizeX * cellSize, 0, z * tileSizeZ * cellSize) + forcedBounds.min,
+                new UnityEngine.Vector3((x + width) * tileSizeX * cellSize, forcedBounds.size.y, (z + depth) * tileSizeZ * cellSize) + forcedBounds.min
+            );
+            return b;
+        }
 
-		/** Returns the tile coordinate which contains the point \a p.
+        /** Returns the tile coordinate which contains the point \a p.
 		 * Is not necessarily a valid tile (i.e, it could be out of bounds).
 		 */
-		public Int2 GetTileCoordinates(UnityEngine.Vector3 p)
+        public Int2 GetTileCoordinates(UnityEngine.Vector3 p)
 		{
 			p -= forcedBounds.min;
 			p.x /= cellSize * tileSizeX;
@@ -317,8 +320,8 @@ namespace Navmesh
         {
             b.center -= forcedBounds.min;
 
-            //Calculate world bounds of all affected tiles
-            var r = new IntRect(
+			//Calculate world bounds of all affected tiles
+			var r = new IntRect(
 				UnityEngine.Mathf.RoundToInt(b.min.x / (tileSizeX * cellSize)),
 				UnityEngine.Mathf.RoundToInt(b.min.z / (tileSizeZ * cellSize)),
 				UnityEngine.Mathf.RoundToInt(b.max.x / (tileSizeX * cellSize)) - 1,
@@ -431,6 +434,21 @@ namespace Navmesh
 
 			GetNodes(del);
 
+			// draw vertex
+			UnityEngine.Gizmos.color = UnityEngine.Color.blue;
+			for (int tileIndex = 0; tileIndex < tiles.Length; ++tileIndex)
+			{
+				var tile = tiles[tileIndex];
+				if (null == tile) continue;
+
+				for (int vertexIndex = 0; vertexIndex < tile.verts.Length; ++vertexIndex)
+				{
+					var v = (UnityEngine.Vector3)tile.verts[vertexIndex];
+					var p = tile.points[vertexIndex].toVector3(0.0f);
+					var iv = new Int3(p);
+					UnityEngine.Gizmos.DrawSphere(p, 0.1f);
+				}
+			}
 		}
 	}
 }
