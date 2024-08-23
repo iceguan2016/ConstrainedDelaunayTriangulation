@@ -23,6 +23,7 @@ namespace Navmesh
 		public FTiledNavmeshGraph Build(FTiledNavmeshBuilderParams inparams, FDebugParams indebugPramas)
 		{
 			FTiledNavmeshGraph graph = new FTiledNavmeshGraph();
+			graph.showNodeConnections = indebugPramas.IsShowNodeConnection;
 
 			graph.forcedBoundsCenter = (inparams.MinBounds + inparams.MaxBounds) * 0.5f;
 			graph.forcedBoundsSize = (inparams.MaxBounds - inparams.MinBounds);

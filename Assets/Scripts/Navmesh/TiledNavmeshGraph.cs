@@ -405,18 +405,20 @@ namespace Navmesh
 				{
 					if (showNodeConnections)
 					{
-						UnityEngine.Gizmos.color = FNavgationSystem.instance.NodeColor(node);
+						UnityEngine.Gizmos.color = FDebugColor.NodeConnection;
 
 						for (int q = 0; q < node.connections.Length; q++)
 						{
 							//Gizmos.color = Color.Lerp (Color.green,Color.red,node.connectionCosts[q]/8000F);
+							UnityEngine.Gizmos.DrawSphere((UnityEngine.Vector3)node.position, 0.1f);
+							UnityEngine.Gizmos.DrawSphere((UnityEngine.Vector3)node.connections[q].position, 0.1f);
 							UnityEngine.Gizmos.DrawLine((UnityEngine.Vector3)node.position, UnityEngine.Vector3.Lerp((UnityEngine.Vector3)node.connections[q].position, (UnityEngine.Vector3)node.position, 0.4f));
 						}
 					}
 
 					if (showMeshOutline)
 					{
-						UnityEngine.Gizmos.color = node.Walkable ? FNavgationSystem.instance.NodeColor(node) : FDebugColor.UnwalkableNode;
+						UnityEngine.Gizmos.color = node.Walkable ? FDebugColor.MeshColor : FDebugColor.UnwalkableNode;
 
 
 						UnityEngine.Gizmos.DrawLine((UnityEngine.Vector3)node.GetVertex(0), (UnityEngine.Vector3)node.GetVertex(1));

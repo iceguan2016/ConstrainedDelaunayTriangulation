@@ -212,8 +212,11 @@ namespace Navmesh
 				case GraphDebugMode.Tags:
 					c = FDebugColor.IntToColor((int)node.Tag, 0.5F);
 					break;
+				case GraphDebugMode.Connections:
+					c = FDebugColor.NodeConnection;
+					break;
 				default:
-					return FDebugColor.NodeConnection;
+					return FDebugColor.MeshEdgeColor;
 
 					//PathNode nodeR = data.GetPathNode(node);
 

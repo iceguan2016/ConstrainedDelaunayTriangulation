@@ -18,6 +18,9 @@ public class FDebugParams
     public int LimitObstacleClipTimes = -1;
     public int MinBuildTileIndex = -1;   // Only build tiles between MinBuildTileIndex and MaxBuildTileIndex
     public int MaxBuildTileIndex = -1;
+
+    public bool IsShowNodeConnection = false;
+    public Navmesh.GraphDebugMode  DebugMode = Navmesh.GraphDebugMode.Areas;
 }
 
 [System.Serializable]
@@ -92,6 +95,11 @@ public class UnitTest_TileData : MonoBehaviour
     void Start()
     {
         Triangulation();
+    }
+
+    void Update()
+    {
+        navgationSystem.debugMode = DebugParams.DebugMode;    
     }
 
     public void Triangulation()
